@@ -45,7 +45,7 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> {
       
       // Configurar janela como flutuante
       await windowManager.setSize(const Size(320, 420));
-      await windowManager.setAlwaysOnTop(true);
+      // Não usar always on top - permite que as notas fiquem atrás de outras janelas
       await windowManager.setTitle(widget.title.isNotEmpty ? widget.title : 'Nota');
       await windowManager.show();
       await windowManager.focus();
