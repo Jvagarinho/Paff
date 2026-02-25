@@ -148,6 +148,8 @@ class FloatingNoteApp extends StatelessWidget {
         title: noteData['title'] ?? '',
         content: noteData['content'] ?? '',
         color: noteData['color'] ?? 0xFFFFFF00,
+        posX: (noteData['posX'] as num?)?.toDouble() ?? 100.0,
+        posY: (noteData['posY'] as num?)?.toDouble() ?? 100.0,
       ),
     );
   }

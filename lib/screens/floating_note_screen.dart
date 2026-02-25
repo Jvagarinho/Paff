@@ -10,6 +10,8 @@ class FloatingNoteScreen extends StatefulWidget {
   final String title;
   final String content;
   final int color;
+  final double posX;
+  final double posY;
 
   const FloatingNoteScreen({
     super.key,
@@ -17,16 +19,20 @@ class FloatingNoteScreen extends StatefulWidget {
     required this.title,
     required this.content,
     required this.color,
+    this.posX = 100.0,
+    this.posY = 100.0,
   });
 
   @override
   State<FloatingNoteScreen> createState() => _FloatingNoteScreenState();
 }
 
-class _FloatingNoteScreenState extends State<FloatingNoteScreen> {
+class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowListener {
   late TextEditingController _titleController;
   late TextEditingController _contentController;
   late int _color;
+  late double _posX;
+  late double _posY;
   bool _isSaving = false;
   bool _hasChanges = false;
 
@@ -36,15 +42,19 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> {
     _titleController = TextEditingController(text: widget.title);
     _contentController = TextEditingController(text: widget.content);
     _color = widget.color;
+    _posX = widget.posX;
+    _posY = widget.posY;
     _setupWindow();
+    windowManager.addListener(this);
   }
 
   void _setupWindow() async {
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       await windowManager.ensureInitialized();
       
-      // Configurar janela como flutuante
+      // Configurar janela como flutuante com posição guardada
       await windowManager.setSize(const Size(320, 420));
+      await windowManager.setPosition(Offset(_posX, _posY));
       // Não usar always on top - permite que as notas fiquem atrás de outras janelas
       await windowManager.setTitle(widget.title.isNotEmpty ? widget.title : 'Nota');
       await windowManager.show();
@@ -54,9 +64,40 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> {
 
   @override
   void dispose() {
+    _savePosition();
+    windowManager.removeListener(this);
     _titleController.dispose();
     _contentController.dispose();
     super.dispose();
+  }
+
+  Future<void> _savePosition() async {
+    try {
+      final position = await windowManager.getPosition();
+      final storageService = await StorageService.getInstance();
+      final notes = await storageService.getAllNotes();
+      final note = notes.firstWhere(
+        (n) => n.id == widget.noteId,
+        orElse: () => Note(
+          id: widget.noteId,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+      
+      final updatedNote = note.copyWith(
+        posX: position.dx,
+        posY: position.dy,
+      );
+      await storageService.saveNote(updatedNote);
+    } catch (e) {
+      print('Erro ao guardar posição: $e');
+    }
+  }
+
+  @override
+  void onWindowMove() {
+    _savePosition();
   }
 
   Future<void> _saveNote({bool showFeedback = false}) async {

@@ -183,6 +183,8 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
         'title': note.title,
         'content': note.content,
         'color': note.color,
+        'posX': note.posX,
+        'posY': note.posY,
       };
       
       await noteFile.writeAsString(jsonEncode(noteData));
