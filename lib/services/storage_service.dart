@@ -50,9 +50,6 @@ class StorageService {
 
   Future<void> saveNote(Note note) async {
     try {
-      // Recarregar para obter estado atual
-      await _reload();
-      
       if (_prefs == null) return;
       
       final notes = await getAllNotes();
@@ -74,8 +71,6 @@ class StorageService {
 
   Future<void> deleteNote(String id) async {
     try {
-      await _reload();
-      
       if (_prefs == null) return;
       
       final notes = await getAllNotes();
@@ -88,7 +83,6 @@ class StorageService {
   }
 
   Future<void> saveAllNotes(List<Note> notes) async {
-    await _reload();
     await _saveNotesList(notes);
   }
 
@@ -98,14 +92,10 @@ class StorageService {
     final notesJson = jsonEncode(notes.map((note) => note.toJson()).toList());
     await _prefs!.setString(_notesKey, notesJson);
     
-    // Forçar commit imediato
-    await _prefs!.reload();
-    
     print('StorageService: Lista de notas guardada - Total: ${notes.length} notas');
   }
 
   Future<void> clearAllNotes() async {
-    await _reload();
     if (_prefs == null) return;
     await _prefs!.remove(_notesKey);
   }
