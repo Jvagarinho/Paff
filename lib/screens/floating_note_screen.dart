@@ -143,6 +143,8 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
     });
     
     try {
+      print('_saveNote: A guardar nota ${widget.noteId}');
+      
       final storageService = await StorageService.getInstance();
       
       // Garantir que a nota existe no armazenamento
@@ -150,16 +152,21 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
       
       // Buscar nota existente
       final notes = await storageService.getAllNotes();
+      print('_saveNote: Notas encontradas: ${notes.length}');
+      
       final note = notes.firstWhere(
         (n) => n.id == widget.noteId,
-        orElse: () => Note(
-          id: widget.noteId,
-          title: _titleController.text,
-          content: _contentController.text,
-          color: _color,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
+        orElse: () {
+          print('_saveNote: Nota não encontrada, a criar nova');
+          return Note(
+            id: widget.noteId,
+            title: _titleController.text,
+            content: _contentController.text,
+            color: _color,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+        },
       );
 
       final updatedNote = note.copyWith(
@@ -168,8 +175,12 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
         color: _color,
         updatedAt: DateTime.now(),
       );
+      
+      print('_saveNote: A guardar nota com título: ${updatedNote.title}');
 
       await storageService.saveNote(updatedNote);
+      
+      print('_saveNote: Nota guardada com sucesso');
       
       if (showFeedback && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

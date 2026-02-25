@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 import '../models/note.dart';
 
 class StorageService {
-  static const String _notesKey = 'sticky_notes';
+  static const String _fileName = 'notes.json';
   static StorageService? _instance;
-  SharedPreferences? _prefs;
+  File? _file;
 
   StorageService._();
 
@@ -18,29 +18,45 @@ class StorageService {
   }
 
   Future<void> _init() async {
-    _prefs = await SharedPreferences.getInstance();
+    final directory = _getNotesDirectory();
+    if (!await directory.exists()) {
+      await directory.create(recursive: true);
+    }
+    _file = File('${directory.path}/$_fileName');
+    print('StorageService: Ficheiro de notas em: ${_file!.path}');
   }
 
-  // Recarregar preferências do disco para garantir dados atualizados
-  Future<void> _reload() async {
-    _prefs = await SharedPreferences.getInstance();
+  Directory _getNotesDirectory() {
+    if (Platform.isWindows) {
+      return Directory('${Platform.environment['APPDATA']}/Paff');
+    } else if (Platform.isMacOS) {
+      return Directory('${Platform.environment['HOME']}/Library/Application Support/Paff');
+    } else {
+      return Directory('${Platform.environment['HOME']}/.paff');
+    }
   }
 
   Future<List<Note>> getAllNotes() async {
     try {
-      // Sempre recarregar para obter dados atualizados de outros processos
-      await _reload();
+      if (_file == null) return [];
       
-      if (_prefs == null) return [];
-      
-      final String? notesJson = _prefs!.getString(_notesKey);
-      if (notesJson == null || notesJson.isEmpty) {
+      if (!await _file!.exists()) {
+        print('StorageService: Ficheiro de notas não existe');
         return [];
       }
 
-      final List<dynamic> notesList = jsonDecode(notesJson);
+      final contents = await _file!.readAsString();
+      if (contents.isEmpty) {
+        print('StorageService: Ficheiro vazio');
+        return [];
+      }
+
+      final List<dynamic> notesList = jsonDecode(contents);
       final notes = notesList.map((json) => Note.fromJson(json)).toList();
       print('StorageService: Carregadas ${notes.length} notas');
+      for (var note in notes) {
+        print('  - ID: ${note.id}, Título: ${note.title}');
+      }
       return notes;
     } catch (e) {
       print('Erro ao carregar notas: $e');
@@ -50,7 +66,7 @@ class StorageService {
 
   Future<void> saveNote(Note note) async {
     try {
-      if (_prefs == null) return;
+      if (_file == null) return;
       
       final notes = await getAllNotes();
       final index = notes.indexWhere((n) => n.id == note.id);
@@ -71,7 +87,7 @@ class StorageService {
 
   Future<void> deleteNote(String id) async {
     try {
-      if (_prefs == null) return;
+      if (_file == null) return;
       
       final notes = await getAllNotes();
       notes.removeWhere((note) => note.id == id);
@@ -87,16 +103,21 @@ class StorageService {
   }
 
   Future<void> _saveNotesList(List<Note> notes) async {
-    if (_prefs == null) return;
+    if (_file == null) return;
     
     final notesJson = jsonEncode(notes.map((note) => note.toJson()).toList());
-    await _prefs!.setString(_notesKey, notesJson);
+    await _file!.writeAsString(notesJson, flush: true);
     
-    print('StorageService: Lista de notas guardada - Total: ${notes.length} notas');
+    // Verificar que foi escrito
+    final verify = await _file!.readAsString();
+    print('StorageService: Lista guardada e verificada - Total: ${notes.length} notas');
+    print('StorageService: Conteúdo do ficheiro: ${verify.substring(0, verify.length > 100 ? 100 : verify.length)}...');
   }
 
   Future<void> clearAllNotes() async {
-    if (_prefs == null) return;
-    await _prefs!.remove(_notesKey);
+    if (_file == null) return;
+    if (await _file!.exists()) {
+      await _file!.delete();
+    }
   }
 }

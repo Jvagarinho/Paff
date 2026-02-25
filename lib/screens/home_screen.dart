@@ -77,7 +77,8 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
       final currentNotes = await storageService.getAllNotes();
       
       if (_notes.length != currentNotes.length) {
-        setState(() { _hasExternalChanges = true; });
+        print('Número de notas mudou: ${_notes.length} -> ${currentNotes.length}');
+        await _loadNotes();
         return;
       }
       
@@ -88,7 +89,8 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
         );
         
         if (existingNote.updatedAt != currentNote.updatedAt) {
-          setState(() { _hasExternalChanges = true; });
+          print('Nota atualizada: ${currentNote.title}');
+          await _loadNotes();
           return;
         }
       }
@@ -98,11 +100,17 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
   }
 
   Future<void> _loadNotes() async {
+    print('_loadNotes: A carregar notas...');
     setState(() { _isLoading = true; _hasExternalChanges = false; });
     
     try {
       final storageService = await StorageService.getInstance();
       final notes = await storageService.getAllNotes();
+      
+      print('_loadNotes: Notas carregadas: ${notes.length}');
+      for (var note in notes) {
+        print('  - ${note.id}: ${note.title}');
+      }
       
       setState(() {
         _notes = notes..sort((a, b) {
