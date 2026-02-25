@@ -2,7 +2,7 @@ param(
     [switch]$Remove
 )
 
-$appName = "Paff. And it's noted."
+$appName = "Paff. And it`s noted."
 $exePath = Join-Path $PSScriptRoot "build\windows\x64\runner\Release\sticky_notes_app.exe"
 
 if (-not (Test-Path $exePath)) {
