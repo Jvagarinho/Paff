@@ -52,6 +52,10 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       await windowManager.ensureInitialized();
       
+      // Garantir que a nota existe no armazenamento
+      final storageService = await StorageService.getInstance();
+      await _ensureNoteExists(storageService);
+      
       // Configurar janela como flutuante com posição guardada
       await windowManager.setSize(const Size(320, 420));
       await windowManager.setPosition(Offset(_posX, _posY));
@@ -75,13 +79,22 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
     try {
       final position = await windowManager.getPosition();
       final storageService = await StorageService.getInstance();
+      
+      // Primeiro garantir que a nota existe no armazenamento
+      await _ensureNoteExists(storageService);
+      
       final notes = await storageService.getAllNotes();
       final note = notes.firstWhere(
         (n) => n.id == widget.noteId,
         orElse: () => Note(
           id: widget.noteId,
+          title: widget.title,
+          content: widget.content,
+          color: widget.color,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
+          posX: position.dx,
+          posY: position.dy,
         ),
       );
       
@@ -90,8 +103,30 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
         posY: position.dy,
       );
       await storageService.saveNote(updatedNote);
+      print('Posição guardada: ${position.dx}, ${position.dy}');
     } catch (e) {
       print('Erro ao guardar posição: $e');
+    }
+  }
+
+  Future<void> _ensureNoteExists(StorageService storageService) async {
+    final notes = await storageService.getAllNotes();
+    final exists = notes.any((n) => n.id == widget.noteId);
+    
+    if (!exists) {
+      print('Nota não existe no armazenamento, a criar...');
+      final newNote = Note(
+        id: widget.noteId,
+        title: widget.title,
+        content: widget.content,
+        color: widget.color,
+        posX: widget.posX,
+        posY: widget.posY,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await storageService.saveNote(newNote);
+      print('Nota criada no armazenamento');
     }
   }
 
@@ -110,12 +145,18 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
     try {
       final storageService = await StorageService.getInstance();
       
+      // Garantir que a nota existe no armazenamento
+      await _ensureNoteExists(storageService);
+      
       // Buscar nota existente
       final notes = await storageService.getAllNotes();
       final note = notes.firstWhere(
         (n) => n.id == widget.noteId,
         orElse: () => Note(
           id: widget.noteId,
+          title: _titleController.text,
+          content: _contentController.text,
+          color: _color,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         ),
