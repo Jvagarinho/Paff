@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
@@ -46,20 +47,71 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
     _posY = widget.posY;
     _setupWindow();
     windowManager.addListener(this);
+    
+    // Verificar periodicamente se a nota ainda existe no storage
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      Timer.periodic(const Duration(seconds: 2), (timer) async {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        final storageService = await StorageService.getInstance();
+        final notes = await storageService.getAllNotes();
+        final exists = notes.any((n) => n.id == widget.noteId);
+        if (!exists && mounted) {
+          print('Nota eliminada no gestor, a fechar janela');
+          await windowManager.close();
+          timer.cancel();
+        }
+      });
+    }
   }
 
   void _setupWindow() async {
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       await windowManager.ensureInitialized();
       
-      // Garantir que a nota existe no armazenamento
-      final storageService = await StorageService.getInstance();
-      await _ensureNoteExists(storageService);
+      // Ocultar botões da janela (minimizar, maximizar, fechar)
+      await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
       
-      // Configurar janela como flutuante com posição guardada
+      // Garantir que a nota existe no armazenamento e obter posição guardada
+      final storageService = await StorageService.getInstance();
+      final notes = await storageService.getAllNotes();
+      final existingNote = notes.where((n) => n.id == widget.noteId).firstOrNull;
+      
+      // Usar posição guardada se existir, senão usar a do widget
+      double posX;
+      double posY;
+      
+      if (existingNote != null) {
+        posX = existingNote.posX;
+        posY = existingNote.posY;
+        print('_setupWindow: Usando posição guardada: $posX, $posY');
+      } else {
+        // Criar nota com posição inicial
+        posX = widget.posX;
+        posY = widget.posY;
+        final newNote = Note(
+          id: widget.noteId,
+          title: widget.title,
+          content: widget.content,
+          color: widget.color,
+          posX: posX,
+          posY: posY,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        await storageService.saveNote(newNote);
+        print('_setupWindow: Nota criada com posição: $posX, $posY');
+      }
+      
+      // Limitar posição para ficar dentro de valores razoáveis
+      posX = posX.clamp(0.0, 2000.0);
+      posY = posY.clamp(0.0, 1500.0);
+      
+      // Configurar janela como flutuante
       await windowManager.setSize(const Size(320, 420));
-      await windowManager.setPosition(Offset(_posX, _posY));
-      // Não usar always on top - permite que as notas fiquem atrás de outras janelas
+      await windowManager.setPosition(Offset(posX, posY));
       await windowManager.setTitle(widget.title.isNotEmpty ? widget.title : 'Nota');
       await windowManager.show();
       await windowManager.focus();
@@ -76,42 +128,52 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
   }
 
   Future<void> _savePosition() async {
+    print('_savePosition: A guardar posição...');
     try {
       final position = await windowManager.getPosition();
+      
+      // Limitar posição para valores válidos
+      final clampedX = position.dx.clamp(0.0, 2000.0);
+      final clampedY = position.dy.clamp(0.0, 1500.0);
+      print('_savePosition: Posição obtida: $clampedX, $clampedY');
+      
       final storageService = await StorageService.getInstance();
+      print('_savePosition: StorageService obtido');
       
-      // Primeiro garantir que a nota existe no armazenamento
-      await _ensureNoteExists(storageService);
-      
+      // Atualizar a nota diretamente
       final notes = await storageService.getAllNotes();
-      final note = notes.firstWhere(
-        (n) => n.id == widget.noteId,
-        orElse: () => Note(
+      print('_savePosition: Notas lidas: ${notes.length}');
+      
+      final index = notes.indexWhere((n) => n.id == widget.noteId);
+      if (index >= 0) {
+        notes[index] = notes[index].copyWith(posX: clampedX, posY: clampedY);
+        print('_savePosition: Nota atualizada com posição: $clampedX, $clampedY');
+      } else {
+        print('_savePosition: Nota não encontrada, a criar nova');
+        notes.add(Note(
           id: widget.noteId,
           title: widget.title,
           content: widget.content,
           color: widget.color,
+          posX: clampedX,
+          posY: clampedY,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
-          posX: position.dx,
-          posY: position.dy,
-        ),
-      );
+        ));
+      }
       
-      final updatedNote = note.copyWith(
-        posX: position.dx,
-        posY: position.dy,
-      );
-      await storageService.saveNote(updatedNote);
-      print('Posição guardada: ${position.dx}, ${position.dy}');
+      await storageService.saveAllNotes(notes);
+      print('_savePosition: Posição guardada com sucesso');
     } catch (e) {
-      print('Erro ao guardar posição: $e');
+      print('_savePosition ERRO: $e');
     }
   }
 
   Future<void> _ensureNoteExists(StorageService storageService) async {
     final notes = await storageService.getAllNotes();
+    print('_ensureNoteExists: Notas no storage: ${notes.length}');
     final exists = notes.any((n) => n.id == widget.noteId);
+    print('_ensureNoteExists: Nota ${widget.noteId} existe? $exists');
     
     if (!exists) {
       print('Nota não existe no armazenamento, a criar...');
@@ -127,12 +189,19 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
       );
       await storageService.saveNote(newNote);
       print('Nota criada no armazenamento');
+    } else {
+      print('Nota já existe no armazenamento');
     }
   }
 
   @override
   void onWindowMove() {
-    _savePosition();
+    // Não guardar posição durante o movimento - apenas quando fechar
+  }
+
+  @override
+  void onWindowResize() {
+    // Não guardar durante o redimensionamento
   }
 
   Future<void> _saveNote({bool showFeedback = false}) async {
@@ -233,6 +302,10 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
   }
 
   Future<void> _confirmClose() async {
+    // Sempre guardar a posição antes de fechar
+    await _savePosition();
+    print('_confirmClose: Posição guardada');
+    
     if (_hasChanges) {
       final result = await showDialog<bool>(
         context: context,
@@ -268,34 +341,53 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
       backgroundColor: Color(_color),
       body: Column(
         children: [
-          // Barra de título
-          Container(
-            height: 40,
-            color: Colors.black.withOpacity(0.1),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      hintText: 'Título',
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
+          // Barra de título (arrastável)
+          GestureDetector(
+            onPanStart: (_) async {
+              if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+                await windowManager.startDragging();
+              }
+            },
+            child: Container(
+              height: 30,
+              color: Colors.black.withOpacity(0.05),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                children: [
+                  // Zona do título - área arrastável visível
+                  Expanded(
+                    flex: 4,
+                    child: Container(
+                      width: 150,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.black.withOpacity(0.1)),
+                      ),
+                      child: TextField(
+                        controller: _titleController,
+                        decoration: const InputDecoration(
+                          hintText: 'Título',
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        onChanged: (_) {
+                          setState(() {
+                            _hasChanges = true;
+                          });
+                        },
+                      ),
                     ),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                    onChanged: (_) {
-                      setState(() {
-                        _hasChanges = true;
-                      });
-                    },
                   ),
-                ),
-                // Botão Guardar
+                  // Espaço vazio arrastável entre título e botões
+                  const Expanded(flex: 4, child: SizedBox()),
+                  // Botão Guardar
                 if (_hasChanges)
                   IconButton(
                     icon: _isSaving 
@@ -311,7 +403,7 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
                     splashRadius: 16,
                     tooltip: 'Guardar',
                   ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.minimize, size: 18),
                   onPressed: () async {
@@ -323,7 +415,7 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
                   constraints: const BoxConstraints(),
                   splashRadius: 16,
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.close, size: 18),
                   onPressed: _confirmClose,
@@ -334,14 +426,6 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
               ],
             ),
           ),
-          // Seletor de cor
-          Container(
-            padding: const EdgeInsets.all(4),
-            color: Colors.black.withOpacity(0.05),
-            child: ColorPicker(
-              selectedColor: _color,
-              onColorSelected: _updateColor,
-            ),
           ),
           // Conteúdo da nota
           Expanded(

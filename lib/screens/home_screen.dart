@@ -107,13 +107,35 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
       final storageService = await StorageService.getInstance();
       final notes = await storageService.getAllNotes();
       
-      print('_loadNotes: Notas carregadas: ${notes.length}');
-      for (var note in notes) {
-        print('  - ${note.id}: ${note.title}');
+      // Corrigir notas com posições inválidas
+      final fixedNotes = notes.map((note) {
+        double posX = note.posX;
+        double posY = note.posY;
+        
+        // Corrigir valores negativos ou muito grandes
+        if (posX < 0 || posX > 2000) posX = 50;
+        if (posY < 0 || posY > 1500) posY = 50;
+        
+        if (posX != note.posX || posY != note.posY) {
+          return note.copyWith(posX: posX, posY: posY);
+        }
+        return note;
+      }).toList();
+      
+      // Guardar notas corrigidas se necessário
+      for (var i = 0; i < fixedNotes.length; i++) {
+        if (fixedNotes[i].posX != notes[i].posX || fixedNotes[i].posY != notes[i].posY) {
+          await storageService.saveNote(fixedNotes[i]);
+        }
+      }
+      
+      print('_loadNotes: Notas carregadas: ${fixedNotes.length}');
+      for (var note in fixedNotes) {
+        print('  - ${note.id}: ${note.title} (pos: ${note.posX}, ${note.posY})');
       }
       
       setState(() {
-        _notes = notes..sort((a, b) {
+        _notes = fixedNotes..sort((a, b) {
           if (a.isPinned && !b.isPinned) return -1;
           if (!a.isPinned && b.isPinned) return 1;
           return b.updatedAt.compareTo(a.updatedAt);
@@ -156,6 +178,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
   }
 
   void _createNewNote() async {
+    print('_createNewNote: A criar nota...');
     final now = DateTime.now();
     final note = Note(
       id: now.millisecondsSinceEpoch.toString(),
@@ -166,6 +189,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
 
     final storageService = await StorageService.getInstance();
     await storageService.saveNote(note);
+    print('_createNewNote: Nota guardada com ID: ${note.id}');
     _loadNotes();
     
     if (mounted) {
@@ -174,6 +198,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
   }
 
   void _openAsFloating(Note note) async {
+    print('_openAsFloating: A abrir nota ${note.id} como flutuante');
     if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) {
       // Mobile: apenas mostrar o editor
       _showNoteEditor(note);
@@ -181,23 +206,26 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     }
 
     try {
+      // Buscar a nota mais recente da lista
+      final latestNote = _notes.firstWhere((n) => n.id == note.id, orElse: () => note);
+      
       // Criar ficheiro temporário com os dados da nota
       final tempDir = Directory.systemTemp;
-      final noteFilePath = '${tempDir.path}/note_${note.id}.json';
+      final noteFilePath = '${tempDir.path}/note_${latestNote.id}.json';
       final noteFile = File(noteFilePath);
       
       final noteData = {
-        'noteId': note.id,
-        'title': note.title,
-        'content': note.content,
-        'color': note.color,
-        'posX': note.posX,
-        'posY': note.posY,
+        'noteId': latestNote.id,
+        'title': latestNote.title,
+        'content': latestNote.content,
+        'color': latestNote.color,
+        'posX': latestNote.posX,
+        'posY': latestNote.posY,
       };
       
       await noteFile.writeAsString(jsonEncode(noteData));
       print('Ficheiro criado: $noteFilePath');
-      print('Conteúdo: ${jsonEncode(noteData)}');
+      print('Posição da nota: ${latestNote.posX}, ${latestNote.posY}');
       
       // Obter o caminho do executável atual
       final exePath = Platform.resolvedExecutable;
@@ -265,17 +293,24 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     setState(() {
       final index = _notes.indexWhere((n) => n.id == note.id);
       if (index >= 0) {
+        // Limitar posição para valores razoáveis
+        double newPosX = (note.posX + details.delta.dx).clamp(0.0, 2000.0);
+        double newPosY = (note.posY + details.delta.dy).clamp(0.0, 1500.0);
+        
         _notes[index] = note.copyWith(
-          posX: note.posX + details.delta.dx,
-          posY: note.posY + details.delta.dy,
+          posX: newPosX,
+          posY: newPosY,
         );
       }
     });
   }
 
   Future<void> _onNoteDragEnd(Note note) async {
+    // Buscar a nota atualizada da lista
+    final updatedNote = _notes.firstWhere((n) => n.id == note.id);
     final storageService = await StorageService.getInstance();
-    await storageService.saveNote(note);
+    await storageService.saveNote(updatedNote);
+    print('_onNoteDragEnd: Nota ${updatedNote.id} guardada com posição: ${updatedNote.posX}, ${updatedNote.posY}');
   }
 
   @override
@@ -333,26 +368,95 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
   }
 
   Widget _buildNotesGrid() {
-    return InteractiveViewer(
-      boundaryMargin: const EdgeInsets.all(double.infinity),
-      minScale: 0.5,
-      maxScale: 2.0,
+    if (_notes.isEmpty) {
+      return const Center(child: Text('Sem notas'));
+    }
+    
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 300,
+        childAspectRatio: 0.8,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: _notes.length,
+      itemBuilder: (context, index) {
+        final note = _notes[index];
+        return _buildNoteCard(note);
+      },
+    );
+  }
+
+  Widget _buildNoteCard(Note note) {
+    return GestureDetector(
+      onTap: () => _showNoteEditor(note),
       child: Container(
-        width: MediaQuery.of(context).size.width * 2,
-        height: MediaQuery.of(context).size.height * 2,
-        color: Colors.grey[100],
-        child: Stack(
-          children: _notes.map((note) {
-            return NoteCard(
-              note: note,
-              isFloating: false,
-              onTap: () => _showNoteEditor(note),
-              onOpenFloating: () => _openAsFloating(note),
-              onDelete: () => _deleteNote(note.id),
-              onDrag: (details) => _onNoteDrag(note, details),
-              onDragEnd: () => _onNoteDragEnd(note),
-            );
-          }).toList(),
+        decoration: BoxDecoration(
+          color: Color(note.color),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 8.0,
+              offset: const Offset(2, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.05),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+              ),
+              child: Row(
+                children: [
+                  if (note.isPinned)
+                    const Icon(Icons.push_pin, size: 16, color: Colors.black54),
+                  Expanded(
+                    child: Text(
+                      note.title.isNotEmpty ? note.title : 'Sem título',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  // Botão abrir como flutuante (só desktop)
+                  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
+                    IconButton(
+                      icon: const Icon(Icons.open_in_new, size: 18),
+                      onPressed: () => _openAsFloating(note),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    onPressed: () => _deleteNote(note.id),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            ),
+            // Conteúdo
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text(
+                  note.content.isNotEmpty ? note.content : 'Clique para editar...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: note.content.isNotEmpty ? Colors.black87 : Colors.black38,
+                  ),
+                  overflow: TextOverflow.fade,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

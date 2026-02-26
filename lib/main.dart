@@ -6,9 +6,19 @@ import 'package:window_manager/window_manager.dart';
 import 'screens/home_screen.dart';
 import 'screens/floating_note_screen.dart';
 import 'services/single_instance_service.dart';
+import 'services/storage_service.dart';
 
 void main(List<String> args) async {
+  print('=== APP INICIADA ===');
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inicializar storage service imediatamente
+  try {
+    final storage = await StorageService.getInstance();
+    print('StorageService inicializado com sucesso');
+  } catch (e) {
+    print('ERRO ao inicializar StorageService: $e');
+  }
   
   print('Argumentos recebidos: $args');
   

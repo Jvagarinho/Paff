@@ -23,7 +23,6 @@ class StorageService {
       await directory.create(recursive: true);
     }
     _file = File('${directory.path}/$_fileName');
-    print('StorageService: Ficheiro de notas em: ${_file!.path}');
   }
 
   Directory _getNotesDirectory() {
@@ -38,28 +37,19 @@ class StorageService {
 
   Future<List<Note>> getAllNotes() async {
     try {
-      if (_file == null) return [];
-      
-      if (!await _file!.exists()) {
-        print('StorageService: Ficheiro de notas não existe');
+      if (_file == null || !await _file!.exists()) {
         return [];
       }
 
       final contents = await _file!.readAsString();
       if (contents.isEmpty) {
-        print('StorageService: Ficheiro vazio');
         return [];
       }
 
       final List<dynamic> notesList = jsonDecode(contents);
-      final notes = notesList.map((json) => Note.fromJson(json)).toList();
-      print('StorageService: Carregadas ${notes.length} notas');
-      for (var note in notes) {
-        print('  - ID: ${note.id}, Título: ${note.title}');
-      }
-      return notes;
+      return notesList.map((json) => Note.fromJson(json)).toList();
     } catch (e) {
-      print('Erro ao carregar notas: $e');
+      print('getAllNotes ERRO: $e');
       return [];
     }
   }
@@ -68,20 +58,27 @@ class StorageService {
     try {
       if (_file == null) return;
       
-      final notes = await getAllNotes();
-      final index = notes.indexWhere((n) => n.id == note.id);
-      
-      if (index >= 0) {
-        notes[index] = note;
-        print('StorageService: Nota atualizada - ID: ${note.id}, Título: ${note.title}');
-      } else {
-        notes.add(note);
-        print('StorageService: Nova nota adicionada - ID: ${note.id}, Título: ${note.title}');
+      // Ler notas existentes
+      List<Note> notes;
+      try {
+        notes = await getAllNotes();
+      } catch (e) {
+        notes = [];
       }
       
-      await _saveNotesList(notes);
+      // Atualizar ou adicionar
+      final index = notes.indexWhere((n) => n.id == note.id);
+      if (index >= 0) {
+        notes[index] = note;
+      } else {
+        notes.add(note);
+      }
+      
+      // Guardar
+      final notesJson = jsonEncode(notes.map((n) => n.toJson()).toList());
+      await _file!.writeAsString(notesJson);
     } catch (e) {
-      print('Erro ao guardar nota: $e');
+      print('saveNote ERRO: $e');
     }
   }
 
@@ -91,33 +88,30 @@ class StorageService {
       
       final notes = await getAllNotes();
       notes.removeWhere((note) => note.id == id);
-      await _saveNotesList(notes);
-      print('StorageService: Nota eliminada - ID: $id');
+      
+      final notesJson = jsonEncode(notes.map((n) => n.toJson()).toList());
+      await _file!.writeAsString(notesJson);
     } catch (e) {
-      print('Erro ao eliminar nota: $e');
+      print('deleteNote ERRO: $e');
     }
   }
 
   Future<void> saveAllNotes(List<Note> notes) async {
-    await _saveNotesList(notes);
-  }
-
-  Future<void> _saveNotesList(List<Note> notes) async {
-    if (_file == null) return;
-    
-    final notesJson = jsonEncode(notes.map((note) => note.toJson()).toList());
-    await _file!.writeAsString(notesJson, flush: true);
-    
-    // Verificar que foi escrito
-    final verify = await _file!.readAsString();
-    print('StorageService: Lista guardada e verificada - Total: ${notes.length} notas');
-    print('StorageService: Conteúdo do ficheiro: ${verify.substring(0, verify.length > 100 ? 100 : verify.length)}...');
+    try {
+      if (_file == null) return;
+      final notesJson = jsonEncode(notes.map((n) => n.toJson()).toList());
+      await _file!.writeAsString(notesJson);
+    } catch (e) {
+      print('saveAllNotes ERRO: $e');
+    }
   }
 
   Future<void> clearAllNotes() async {
-    if (_file == null) return;
-    if (await _file!.exists()) {
-      await _file!.delete();
-    }
+    try {
+      if (_file == null) return;
+      if (await _file!.exists()) {
+        await _file!.delete();
+      }
+    } catch (e) {}
   }
 }
