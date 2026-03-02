@@ -42,9 +42,11 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
   }
 
   void _startPeriodicRefresh() {
-    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (mounted) {
         _checkForExternalChanges();
+      } else {
+        timer.cancel();
       }
     });
   }
@@ -52,6 +54,12 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
   @override
   void onWindowFocus() {
     _checkForExternalChanges();
+  }
+
+  @override
+  void onWindowBlur() {
+    // Parar refresh quando a janela perde o foco
+    _refreshTimer?.cancel();
   }
 
   @override

@@ -36,6 +36,7 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
   late double _posY;
   bool _isSaving = false;
   bool _hasChanges = false;
+  Timer? _checkDeleteTimer;
 
   @override
   void initState() {
@@ -48,9 +49,9 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
     _setupWindow();
     windowManager.addListener(this);
     
-    // Verificar periodicamente se a nota ainda existe no storage
+    // Verificar periodicamente se a nota ainda existe no storage (a cada 5 segundos)
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      Timer.periodic(const Duration(seconds: 2), (timer) async {
+      _checkDeleteTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
         if (!mounted) {
           timer.cancel();
           return;
@@ -120,6 +121,7 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
 
   @override
   void dispose() {
+    _checkDeleteTimer?.cancel();
     _savePosition();
     windowManager.removeListener(this);
     _titleController.dispose();
