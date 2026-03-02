@@ -42,13 +42,8 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
   }
 
   void _startPeriodicRefresh() {
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (mounted) {
-        _checkForExternalChanges();
-      } else {
-        timer.cancel();
-      }
-    });
+    // Não usar timer constante - apenas verificar quando a janela ganha foco
+    // O refresh será feito em onWindowFocus()
   }
 
   @override
@@ -58,8 +53,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
 
   @override
   void onWindowBlur() {
-    // Parar refresh quando a janela perde o foco
-    _refreshTimer?.cancel();
+    // Não faz nada quando perde o foco - apenas economiza CPU
   }
 
   @override

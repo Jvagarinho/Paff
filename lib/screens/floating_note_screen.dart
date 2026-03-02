@@ -36,7 +36,6 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
   late double _posY;
   bool _isSaving = false;
   bool _hasChanges = false;
-  Timer? _checkDeleteTimer;
 
   @override
   void initState() {
@@ -48,24 +47,6 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
     _posY = widget.posY;
     _setupWindow();
     windowManager.addListener(this);
-    
-    // Verificar periodicamente se a nota ainda existe no storage (a cada 5 segundos)
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      _checkDeleteTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-        if (!mounted) {
-          timer.cancel();
-          return;
-        }
-        final storageService = await StorageService.getInstance();
-        final notes = await storageService.getAllNotes();
-        final exists = notes.any((n) => n.id == widget.noteId);
-        if (!exists && mounted) {
-          print('Nota eliminada no gestor, a fechar janela');
-          await windowManager.close();
-          timer.cancel();
-        }
-      });
-    }
   }
 
   void _setupWindow() async {
@@ -121,7 +102,6 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
 
   @override
   void dispose() {
-    _checkDeleteTimer?.cancel();
     _savePosition();
     windowManager.removeListener(this);
     _titleController.dispose();
@@ -193,6 +173,23 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
       print('Nota criada no armazenamento');
     } else {
       print('Nota já existe no armazenamento');
+    }
+  }
+
+  @override
+  void onWindowFocus() {
+    // Verificar se a nota ainda existe no storage quando ganha foco
+    _checkIfNoteExists();
+  }
+
+  Future<void> _checkIfNoteExists() async {
+    if (!mounted) return;
+    final storageService = await StorageService.getInstance();
+    final notes = await storageService.getAllNotes();
+    final exists = notes.any((n) => n.id == widget.noteId);
+    if (!exists && mounted) {
+      print('Nota eliminada no gestor, a fechar janela');
+      await windowManager.close();
     }
   }
 
