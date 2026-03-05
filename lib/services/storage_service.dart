@@ -112,6 +112,8 @@ class StorageService {
       if (await _file!.exists()) {
         await _file!.delete();
       }
-    } catch (e) {}
+    } catch (e) {
+      print('clearAllNotes ERRO: $e');
+    }
   }
 }

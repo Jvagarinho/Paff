@@ -78,7 +78,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     return Scaffold(
       backgroundColor: Color(_note.color),
       appBar: AppBar(
-        backgroundColor: Color(_note.color).withOpacity(0.9),
+        backgroundColor: Color(_note.color).withValues(alpha: 0.9),
         elevation: 0,
         automaticallyImplyLeading: !widget.isFloating,
         leading: widget.isFloating
@@ -118,7 +118,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(8.0),
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             child: ColorPicker(
               selectedColor: _note.color,
               onColorSelected: _updateColor,

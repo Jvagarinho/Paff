@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import '../models/note.dart';
 import '../services/storage_service.dart';
-import '../widgets/note_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -170,10 +169,11 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
           _loadNotes();
         },
         onDelete: isNew ? null : (noteId) async {
+          final navigator = Navigator.of(context);
           final storageService = await StorageService.getInstance();
           await storageService.deleteNote(noteId);
           _loadNotes();
-          if (mounted) Navigator.pop(context);
+          if (mounted) navigator.pop();
         },
       ),
     );
@@ -291,30 +291,6 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     }
   }
 
-  void _onNoteDrag(Note note, DragUpdateDetails details) {
-    setState(() {
-      final index = _notes.indexWhere((n) => n.id == note.id);
-      if (index >= 0) {
-        // Limitar posição para valores razoáveis
-        double newPosX = (note.posX + details.delta.dx).clamp(0.0, 2000.0);
-        double newPosY = (note.posY + details.delta.dy).clamp(0.0, 1500.0);
-        
-        _notes[index] = note.copyWith(
-          posX: newPosX,
-          posY: newPosY,
-        );
-      }
-    });
-  }
-
-  Future<void> _onNoteDragEnd(Note note) async {
-    // Buscar a nota atualizada da lista
-    final updatedNote = _notes.firstWhere((n) => n.id == note.id);
-    final storageService = await StorageService.getInstance();
-    await storageService.saveNote(updatedNote);
-    print('_onNoteDragEnd: Nota ${updatedNote.id} guardada com posição: ${updatedNote.posX}, ${updatedNote.posY}');
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -399,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
           borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 8.0,
               offset: const Offset(2, 2),
             ),
@@ -412,7 +388,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
               ),
               child: Row(
@@ -528,7 +504,7 @@ class _NoteEditorSheetState extends State<NoteEditorSheet> {
             height: 50,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Row(
@@ -572,7 +548,7 @@ class _NoteEditorSheetState extends State<NoteEditorSheet> {
           // Seletor de cores
           Container(
             padding: const EdgeInsets.all(8),
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(

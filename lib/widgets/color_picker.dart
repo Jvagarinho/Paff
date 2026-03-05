@@ -23,9 +23,9 @@ class ColorPicker extends StatelessWidget {
         spacing: 8.0,
         runSpacing: 8.0,
         children: AppConstants.noteColors.map((color) {
-          final isSelected = color.value == selectedColor;
+          final isSelected = color.toARGB32() == selectedColor;
           return GestureDetector(
-            onTap: () => onColorSelected(color.value),
+            onTap: () => onColorSelected(color.toARGB32()),
             child: Container(
               width: 32,
               height: 32,
@@ -38,7 +38,7 @@ class ColorPicker extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 2,
                     offset: const Offset(1, 1),
                   ),

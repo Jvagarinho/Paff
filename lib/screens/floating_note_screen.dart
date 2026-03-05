@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import '../services/storage_service.dart';
-import '../widgets/color_picker.dart';
 import '../models/note.dart';
 
 class FloatingNoteScreen extends StatefulWidget {
@@ -32,8 +31,6 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
   late TextEditingController _titleController;
   late TextEditingController _contentController;
   late int _color;
-  late double _posX;
-  late double _posY;
   bool _isSaving = false;
   bool _hasChanges = false;
 
@@ -43,13 +40,11 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
     _titleController = TextEditingController(text: widget.title);
     _contentController = TextEditingController(text: widget.content);
     _color = widget.color;
-    _posX = widget.posX;
-    _posY = widget.posY;
     _setupWindow();
     windowManager.addListener(this);
   }
 
-  void _setupWindow() async {
+  Future<void> _setupWindow() async {
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       await windowManager.ensureInitialized();
       
@@ -59,7 +54,13 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
       // Garantir que a nota existe no armazenamento e obter posição guardada
       final storageService = await StorageService.getInstance();
       final notes = await storageService.getAllNotes();
-      final existingNote = notes.where((n) => n.id == widget.noteId).firstOrNull;
+      Note? existingNote;
+      for (final note in notes) {
+        if (note.id == widget.noteId) {
+          existingNote = note;
+          break;
+        }
+      }
       
       // Usar posição guardada se existir, senão usar a do widget
       double posX;
@@ -112,6 +113,7 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
   Future<void> _savePosition() async {
     print('_savePosition: A guardar posição...');
     try {
+      if (!mounted) return;
       final position = await windowManager.getPosition();
       
       // Limitar posição para valores válidos
@@ -222,22 +224,21 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
       final notes = await storageService.getAllNotes();
       print('_saveNote: Notas encontradas: ${notes.length}');
       
-      final note = notes.firstWhere(
-        (n) => n.id == widget.noteId,
-        orElse: () {
-          print('_saveNote: Nota não encontrada, a criar nova');
-          return Note(
-            id: widget.noteId,
-            title: _titleController.text,
-            content: _contentController.text,
-            color: _color,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          );
-        },
-      );
+      Note? note;
+      try {
+        note = notes.firstWhere((n) => n.id == widget.noteId);
+      } catch (e) {
+        note = null;
+      }
 
-      final updatedNote = note.copyWith(
+      final updatedNote = (note ?? Note(
+        id: widget.noteId,
+        title: _titleController.text,
+        content: _contentController.text,
+        color: _color,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      )).copyWith(
         title: _titleController.text,
         content: _contentController.text,
         color: _color,
@@ -283,29 +284,13 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
     }
   }
 
-  void _updateColor(int color) {
-    setState(() {
-      _color = color;
-      _hasChanges = true;
-    });
-    _saveNote();
-  }
-
-  Future<void> _closeWindow() async {
-    if (_hasChanges) {
-      await _saveNote();
-    }
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      await windowManager.close();
-    }
-  }
-
   Future<void> _confirmClose() async {
     // Sempre guardar a posição antes de fechar
     await _savePosition();
     print('_confirmClose: Posição guardada');
     
     if (_hasChanges) {
+      if (!mounted) return;
       final result = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -349,7 +334,7 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
             },
             child: Container(
               height: 30,
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Row(
                 children: [
@@ -360,9 +345,9 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
                       width: 150,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.5),
+                        color: Colors.white.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.black.withOpacity(0.1)),
+                        border: Border.all(color: Colors.black.withValues(alpha: 0.1)),
                       ),
                       child: TextField(
                         controller: _titleController,
@@ -387,44 +372,44 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
                   // Espaço vazio arrastável entre título e botões
                   const Expanded(flex: 4, child: SizedBox()),
                   // Botão Guardar
-                if (_hasChanges)
+                  if (_hasChanges)
+                    IconButton(
+                      icon: _isSaving 
+                        ? const SizedBox(
+                            width: 16, 
+                            height: 16, 
+                            child: CircularProgressIndicator(strokeWidth: 2)
+                          )
+                        : const Icon(Icons.save, size: 18, color: Colors.green),
+                      onPressed: () => _saveNote(showFeedback: true),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      splashRadius: 16,
+                      tooltip: 'Guardar',
+                    ),
+                  const SizedBox(width: 8),
                   IconButton(
-                    icon: _isSaving 
-                      ? const SizedBox(
-                          width: 16, 
-                          height: 16, 
-                          child: CircularProgressIndicator(strokeWidth: 2)
-                        )
-                      : const Icon(Icons.save, size: 18, color: Colors.green),
-                    onPressed: () => _saveNote(showFeedback: true),
+                    icon: const Icon(Icons.minimize, size: 18),
+                    onPressed: () async {
+                      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+                        await windowManager.minimize();
+                      }
+                    },
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     splashRadius: 16,
-                    tooltip: 'Guardar',
                   ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.minimize, size: 18),
-                  onPressed: () async {
-                    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-                      await windowManager.minimize();
-                    }
-                  },
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  splashRadius: 16,
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 18),
-                  onPressed: _confirmClose,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  splashRadius: 16,
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    onPressed: _confirmClose,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    splashRadius: 16,
+                  ),
+                ],
+              ),
             ),
-          ),
           ),
           // Conteúdo da nota
           Expanded(
@@ -450,7 +435,7 @@ class _FloatingNoteScreenState extends State<FloatingNoteScreen> with WindowList
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(8),
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               child: ElevatedButton.icon(
                 onPressed: _isSaving ? null : () => _saveNote(showFeedback: true),
                 icon: _isSaving 

@@ -14,7 +14,7 @@ void main(List<String> args) async {
   
   // Inicializar storage service imediatamente
   try {
-    final storage = await StorageService.getInstance();
+    await StorageService.getInstance();
     print('StorageService inicializado com sucesso');
   } catch (e) {
     print('ERRO ao inicializar StorageService: $e');
@@ -79,7 +79,7 @@ void main(List<String> args) async {
   // Inicializar gestor
   await windowManager.ensureInitialized();
   
-  WindowOptions windowOptions = const WindowOptions(
+  final WindowOptions windowOptions = const WindowOptions(
     size: Size(500, 700),
     center: true,
     backgroundColor: Colors.transparent,

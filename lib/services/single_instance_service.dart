@@ -45,10 +45,10 @@ class SingleInstanceService {
       }
 
       // Criar novo lock com PID atual
-      await _lockFile!.writeAsString('${pid}');
+      await _lockFile!.writeAsString('$pid');
       _isLocked = true;
       
-      print('SingleInstance: Lock obtido com sucesso (PID: ${pid})');
+      print('SingleInstance: Lock obtido com sucesso (PID: $pid)');
       return true;
     } catch (e) {
       print('SingleInstance: Erro ao obter lock: $e');
