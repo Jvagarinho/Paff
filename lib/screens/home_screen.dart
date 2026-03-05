@@ -3,8 +3,11 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:provider/provider.dart';
 import '../models/note.dart';
-import '../services/storage_service.dart';
+import '../services/storage_service_interface.dart';
+import '../providers/notes_provider.dart';
+import '../injection.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,6 +17,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WindowListener {
+  final StorageServiceInterface _storageService = locator<StorageServiceInterface>();
+  late NotesProvider _notesProvider;
   List<Note> _notes = [];
   bool _isLoading = true;
   bool _hasExternalChanges = false;
@@ -22,9 +27,10 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
   @override
   void initState() {
     super.initState();
-    _loadNotes();
+    _notesProvider = Provider.of<NotesProvider>(context, listen: false);
     _setupWindowListener();
     _startPeriodicRefresh();
+    _loadNotes();
   }
 
   @override
@@ -74,8 +80,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
 
   Future<void> _checkForExternalChanges() async {
     try {
-      final storageService = await StorageService.getInstance();
-      final currentNotes = await storageService.getAllNotes();
+      final currentNotes = await _storageService.getAllNotes();
       
       if (_notes.length != currentNotes.length) {
         print('Número de notas mudou: ${_notes.length} -> ${currentNotes.length}');
@@ -105,8 +110,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     setState(() { _isLoading = true; _hasExternalChanges = false; });
     
     try {
-      final storageService = await StorageService.getInstance();
-      final notes = await storageService.getAllNotes();
+      final notes = _notesProvider.notes;
       
       // Corrigir notas com posições inválidas
       final fixedNotes = notes.map((note) {
@@ -126,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
       // Guardar notas corrigidas se necessário
       for (var i = 0; i < fixedNotes.length; i++) {
         if (fixedNotes[i].posX != notes[i].posX || fixedNotes[i].posY != notes[i].posY) {
-          await storageService.saveNote(fixedNotes[i]);
+          await _notesProvider.saveNote(fixedNotes[i]);
         }
       }
       
@@ -164,14 +168,12 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
         note: note,
         isNew: isNew,
         onSave: (updatedNote) async {
-          final storageService = await StorageService.getInstance();
-          await storageService.saveNote(updatedNote);
+          await _notesProvider.saveNote(updatedNote);
           _loadNotes();
         },
         onDelete: isNew ? null : (noteId) async {
           final navigator = Navigator.of(context);
-          final storageService = await StorageService.getInstance();
-          await storageService.deleteNote(noteId);
+          await _notesProvider.deleteNote(noteId);
           _loadNotes();
           if (mounted) navigator.pop();
         },
@@ -189,8 +191,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
       updatedAt: now,
     );
 
-    final storageService = await StorageService.getInstance();
-    await storageService.saveNote(note);
+    await _notesProvider.saveNote(note);
     print('_createNewNote: Nota guardada com ID: ${note.id}');
     _loadNotes();
     
@@ -285,8 +286,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     );
 
     if (confirmed == true) {
-      final storageService = await StorageService.getInstance();
-      await storageService.deleteNote(id);
+      await _notesProvider.deleteNote(id);
       _loadNotes();
     }
   }

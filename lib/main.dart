@@ -1,20 +1,26 @@
-import 'dart:convert';
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:provider/provider.dart';
+import 'providers/notes_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/floating_note_screen.dart';
 import 'services/single_instance_service.dart';
 import 'services/storage_service.dart';
+import 'locator.dart';
+import 'utils/errors/single_instance_exceptions.dart';
 
 void main(List<String> args) async {
   print('=== APP INICIADA ===');
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Inicializar storage service imediatamente
+  // Inicializar storage service via locator
   try {
-    await StorageService.getInstance();
+    setupLocator();
+    // Forçar inicialização do StorageService
+    locator<StorageService>();
     print('StorageService inicializado com sucesso');
   } catch (e) {
     print('ERRO ao inicializar StorageService: $e');
@@ -50,7 +56,7 @@ void main(List<String> args) async {
           await windowManager.ensureInitialized();
         }
         
-        runApp(FloatingNoteApp(noteData: noteData));
+        runApp(const StickyNotesApp());
         return;
       }
     } catch (e) {
@@ -60,20 +66,33 @@ void main(List<String> args) async {
   
   // É a janela principal - verificar se já existe outra instância
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    final singleInstance = SingleInstanceService();
-    final canRun = await singleInstance.tryLock();
-    
-    if (!canRun) {
-      // Já existe uma instância do gestor em execução
-      print('Gestor de notas já está em execução.');
-      exit(0);
+    try {
+      final singleInstance = SingleInstanceService();
+      final canRun = await singleInstance.tryLock();
+      
+      if (!canRun) {
+        // Já existe uma instância do gestor em execução
+        print('Gestor de notas já está em execução.');
+        exit(0);
+      }
+      
+      // Registrar liberação do lock quando o app fechar
+      ProcessSignal.sigint.watch().listen((_) async {
+        try {
+          await singleInstance.release();
+        } catch (e) {
+          print('Erro ao liberar lock: $e');
+        } finally {
+          exit(0);
+        }
+      });
+    } on SingleInstanceException catch (e) {
+      print('Erro de single instance: ${e.message}');
+      exit(1);
+    } catch (e) {
+      print('Erro desconhecido ao inicializar single instance: $e');
+      exit(1);
     }
-    
-    // Registrar liberação do lock quando o app fechar
-    ProcessSignal.sigint.watch().listen((_) async {
-      await singleInstance.release();
-      exit(0);
-    });
   }
   
   // Inicializar gestor
@@ -108,35 +127,42 @@ class StickyNotesApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Paff. And it\'s noted.',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.amber,
-          brightness: Brightness.light,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (context) => NotesProvider(),
         ),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 2,
-        ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+      ],
+      child: MaterialApp(
+        title: 'Paff. And it\'s noted.',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.amber,
+            brightness: Brightness.light,
+          ),
+          useMaterial3: true,
+          appBarTheme: const AppBarTheme(
+            centerTitle: true,
+            elevation: 2,
+          ),
+          floatingActionButtonTheme: FloatingActionButtonThemeData(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
         ),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.amber,
-          brightness: Brightness.dark,
+        darkTheme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.amber,
+            brightness: Brightness.dark,
+          ),
+          useMaterial3: true,
         ),
-        useMaterial3: true,
+        themeMode: ThemeMode.system,
+        home: const HomeScreen(),
       ),
-      themeMode: ThemeMode.system,
-      home: const HomeScreen(),
     );
   }
 }

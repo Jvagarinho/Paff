@@ -23,6 +23,18 @@ class FloatingNoteScreen extends StatefulWidget {
     this.posY = 100.0,
   });
 
+  /// Factory constructor to create FloatingNoteScreen from a map (for opening from file)
+  factory FloatingNoteScreen.fromMap(Map<String, dynamic> map) {
+    return FloatingNoteScreen(
+      noteId: map['noteId'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      title: map['title'] as String? ?? '',
+      content: map['content'] as String? ?? '',
+      color: (map['color'] as num?)?.toInt() ?? 0xFFFFFF00,
+      posX: (map['posX'] as num?)?.toDouble() ?? 100.0,
+      posY: (map['posY'] as num?)?.toDouble() ?? 100.0,
+    );
+  }
+
   @override
   State<FloatingNoteScreen> createState() => _FloatingNoteScreenState();
 }
