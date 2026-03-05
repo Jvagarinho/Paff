@@ -13,33 +13,33 @@ A modern, cross-platform sticky notes application built with Flutter, inspired b
 
 *Coming soon - Application screenshots*
 
-## ✨ Funcionalidades
+## ✨ Features
 
-### 📝 Editor de Texto Rico
-- Suporte a **negrito**, *itálico*, <u>sublinhado</u>
-- Listas numeradas e com marcadores
-- Cabeçalhos e formatação avançada
-- Suporte a emojis e caracteres especiais
+### 📝 Rich Text Editor
+- Support for **bold**, *italic*, <u>underline</u>
+- Numbered and bulleted lists
+- Headers and advanced formatting
+- Emoji and special character support
 
-### 🎨 Personalização Visual
-- **10 cores** diferentes para categorizar notas
-- Interface limpa e minimalista
-- Transparências e sombras suaves
-- Suporte a temas claro/escuro (em desenvolvimento)
+### 🎨 Visual Customization
+- **10 different colors** to categorize notes
+- Clean and minimalist interface
+- Smooth transparencies and shadows
+- Light/dark theme support (in development)
 
-### 📌 Organização
-- **Fixar notas** importantes no topo
-- **Arrastar e soltar** para reorganizar
-- Ordenação automática por data de modificação
-- Filtros por cor e status de fixação
+### 📌 Organization
+- **Pin important** notes to the top
+- **Drag and drop** to reorganize
+- Automatic sorting by modification date
+- Filters by color and pin status
 
-### 💾 Persistência Robusta
-- Armazenamento **local** em JSON
-- **Auto-save** após cada edição
-- **Recuperação de erros** com rollback automático
-- Backup automático de dados corrompidos
+### 💾 Robust Persistence
+- **Local** JSON storage
+- **Auto-save** after each edit
+- **Error recovery** with automatic rollback
+- Automatic backup of corrupted data
 
-### 🖥️ Multiplataforma
+### 🖥️ Cross-Platform
 - ✅ **Windows** (x64)
 - ✅ **Linux** (x64)
 - ✅ **macOS** (Intel/Apple Silicon)
@@ -48,10 +48,10 @@ A modern, cross-platform sticky notes application built with Flutter, inspired b
 - ✅ **Web** (experimental)
 
 ### 🔒 Single Instance (Desktop)
-- Apenas **uma instância** do gestor principal
-- Notas flutuantes independentes
-- Sistema de lock com PID tracking
-- Recuperação automática de locks órfãos
+- Only **one instance** of the main manager
+- Independent floating notes
+- Lock system with PID tracking
+- Automatic recovery of orphaned locks
 
 ## 🏗️ Architecture
 
