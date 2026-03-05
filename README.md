@@ -2,7 +2,7 @@
 
 > **And it's noted.**
 
-Aplicação de notas adesivas moderna e multiplataforma desenvolvida em Flutter, inspirada no Sticky Notes do Windows, com foco em performance, confiabilidade e experiência do usuário.
+A modern, cross-platform sticky notes application built with Flutter, inspired by Windows Sticky Notes, with a focus on performance, reliability, and user experience.
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.0+-blue.svg)
 ![Dart](https://img.shields.io/badge/Dart-3.0+-blue.svg)
@@ -11,7 +11,7 @@ Aplicação de notas adesivas moderna e multiplataforma desenvolvida em Flutter,
 
 ## 📸 Screenshots
 
-*Em breve - Capturas de tela da aplicação*
+*Coming soon - Application screenshots*
 
 ## ✨ Funcionalidades
 
@@ -53,79 +53,79 @@ Aplicação de notas adesivas moderna e multiplataforma desenvolvida em Flutter,
 - Sistema de lock com PID tracking
 - Recuperação automática de locks órfãos
 
-## 🏗️ Arquitetura
+## 🏗️ Architecture
 
-O projeto segue princípios de **Clean Architecture** e **SOLID**:
+The project follows **Clean Architecture** and **SOLID** principles:
 
 ```
 lib/
-├── main.dart              # Ponto de entrada e configuração
-├── injection.dart         # Injeção de dependências (GetIt)
+├── main.dart              # Entry point and configuration
+├── injection.dart         # Dependency injection (GetIt)
 ├── locator.dart           # Service Locator
-├── models/                # Camada de domínio
-│   └── note.dart         # Entidade Note
-├── services/              # Camada de dados
-│   ├── storage_service.dart           # Implementação concreta
-│   ├── storage_service_interface.dart # Contrato
+├── models/                # Domain layer
+│   └── note.dart         # Note entity
+├── services/              # Data layer
+│   ├── storage_service.dart           # Concrete implementation
+│   ├── storage_service_interface.dart # Contract
 │   ├── single_instance_service.dart   # Single instance
 │   └── single_instance_service_interface.dart
-├── providers/             # Camada de apresentação (State Management)
+├── providers/             # Presentation layer (State Management)
 │   └── notes_provider.dart
 ├── screens/               # UI Widgets
 │   ├── home_screen.dart
 │   └── note_editor_screen.dart
-├── widgets/               # Componentes reutilizáveis
+├── widgets/               # Reusable components
 │   ├── note_card.dart
 │   └── color_picker.dart
-├── logic/                 # Lógica de negócio
+├── logic/                 # Business logic
 │   └── home_screen_logic.dart
-└── utils/                # Utilitários
+└── utils/                # Utilities
     ├── constants.dart
-    └── errors/          # Sistema de exceções
+    └── errors/          # Exception system
         ├── storage_exceptions.dart
         └── single_instance_exceptions.dart
 ```
 
-### Padrões Utilizados
+### Design Patterns Used
 - **Repository Pattern** - `StorageService`
-- **Provider Pattern** - Gerenciamento de estado
-- **Service Locator** - `GetIt` para injeção de dependências
-- **Interface Segregation** - Interfaces específicas por responsabilidade
-- **Error Handling** - Exceções customizadas com rollback
+- **Provider Pattern** - State management
+- **Service Locator** - `GetIt` for dependency injection
+- **Interface Segregation** - Responsibility-specific interfaces
+- **Error Handling** - Custom exceptions with rollback
 
 ## 🚀 Como Começar
 
-### Pré-requisitos
+### Prerequisites
 
 1. **Flutter SDK** (>=3.0.0)
    ```bash
    flutter --version
    ```
 
-2. **Editor Recomendado**
-   - [VS Code](https://code.visualstudio.com/) + Extensão Flutter
-   - Ou [Android Studio](https://developer.android.com/studio)
+2. **Recommended Editor**
+   - [VS Code](https://code.visualstudio.com/) + Flutter extension
+   - Or [Android Studio](https://developer.android.com/studio)
 
-3. **Ferramentas de Build** (para desktop)
-   - **Windows**: Visual Studio 2022 com Desktop development with C++
+3. **Build Tools** (for desktop)
+   - **Windows**: Visual Studio 2022 with Desktop development with C++
    - **Linux**: `sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev`
    - **macOS**: Xcode Command Line Tools
 
-### Instalação Rápida
+### Quick Setup
 
 ```bash
-# 1. Clone o repositório
+# 1. Clone the repository
 git clone https://github.com/Jvagarinho/Paff.git
 cd Paff
 
-# 2. Instale dependências
+# 2. Install dependencies
 flutter pub get
 
-# 3. Execute em desenvolvimento
-flutter run -d windows  # ou linux, macos, chrome, etc.
+# 3. Run in development
+flutter run -d windows  # or linux, macos, chrome, etc.
 ```
 
-### Build para Produção
+### Production Build
 
 #### Desktop
 ```bash
@@ -144,10 +144,10 @@ flutter build macos --release
 # Android APK
 flutter build apk --release
 
-# Android App Bundle (para Google Play)
+# Android App Bundle (for Google Play)
 flutter build appbundle --release
 
-# iOS (requer macOS)
+# iOS (requires macOS)
 flutter build ios --release
 ```
 
@@ -156,130 +156,130 @@ flutter build ios --release
 flutter build web --release
 ```
 
-## 🧪 Testes
+## 🧪 Testing
 
-O projeto inclui uma suíte completa de testes unitários:
+The project includes a comprehensive unit test suite:
 
 ```bash
-# Executar todos os testes
+# Run all tests
 flutter test
 
-# Executar com cobertura
+# Run with coverage
 flutter test --coverage
 
-# Ver relatório de cobertura
+# View coverage report
 genhtml coverage/lcov.info -o coverage/html
 ```
 
-### Status dos Testes
-- ✅ **14/14 testes passando**
-- ✅ Cobertura de serviços e providers
-- ✅ Mock com `mocktail` para isolamento
+### Test Status
+- ✅ **14/14 tests passing**
+- ✅ Services and providers coverage
+- ✅ `mocktail` for isolation
 
-## 🔧 Configuração
+## 🔧 Configuration
 
-### Modo Debug (Logs Detalhados)
+### Debug Mode (Detailed Logs)
 
-Para habilitar logs detalhados nos serviços:
+To enable detailed logs in services:
 
 ```dart
 final storage = StorageService(debugMode: true);
 ```
 
-Os logs incluem:
-- Operações de leitura/escrita
-- Erros e exceções
-- Ciclo de vida do single instance
-- Rollbacks em caso de falha
+Logs include:
+- Read/write operations
+- Errors and exceptions
+- Single instance lifecycle
+- Rollbacks on failure
 
-### Variáveis de Ambiente
+### Environment Variables
 
-Nenhuma variável de ambiente necessária. O armazenamento usa:
+No environment variables required. Storage uses:
 - **Windows**: `%APPDATA%/Paff/notes.json`
 - **macOS**: `~/Library/Application Support/Paff/notes.json`
 - **Linux**: `~/.paff/notes.json`
 
-## 🐛 Tratamento de Erros
+## 🐛 Error Handling
 
-O sistema implementa **tratamento de erros robusto**:
+The system implements **robust error handling**:
 
-### Exceções Personalizadas
-- `StorageException` - Erros gerais de armazenamento
-- `FileAccessException` - Problemas de permissão/IO
-- `JsonParseException` - Dados corrompidos
-- `DirectoryCreationException` - Falha ao criar diretórios
-- `LockAcquisitionException` - Falha no single instance
-- `LockReleaseException` - Erro ao liberar lock
+### Custom Exceptions
+- `StorageException` - General storage errors
+- `FileAccessException` - Permission/IO issues
+- `JsonParseException` - Corrupted data
+- `DirectoryCreationException` - Directory creation failure
+- `LockAcquisitionException` - Single instance failure
+- `LockReleaseException` - Lock release error
 
-### Rollback Automático
-Em caso de erro, o estado local é revertido automaticamente:
-- `NotesProvider` mantém consistência
-- `StorageService` não deixa dados órfãos
-- `SingleInstanceService` limpa locks automaticamente
+### Automatic Rollback
+On error, local state is automatically reverted:
+- `NotesProvider` maintains consistency
+- `StorageService` leaves no orphaned data
+- `SingleInstanceService` automatically cleans locks
 
 ### Logs
-- **Debug mode**: Logs detalhados no console
-- **Release mode**: Apenas erros críticos
-- **Arquivos**: Nenhum log em arquivo (pode ser adicionado)
+- **Debug mode**: Detailed console logs
+- **Release mode**: Critical errors only
+- **Files**: No file logging (can be added)
 
-## 📊 Qualidade de Código
+## 📊 Code Quality
 
-### Análise Estática
+### Static Analysis
 ```bash
 flutter analyze --no-pub
 ```
-✅ **Sem erros ou warnings**
+✅ **No errors or warnings**
 
-### Convenções
-- **Dart Style Guide** seguido rigorosamente
+### Conventions
+- **Dart Style Guide** strictly followed
 - **Effective Dart** guidelines
-- **Super parameters** para construtores
-- **Null safety** completo
+- **Super parameters** for constructors
+- Full **Null safety**
 
-### Cobertura de Testes
+### Test Coverage
 - Services: 100%
 - Providers: 100%
 - Logic: 100%
 
-## 🤝 Contribuindo
+## 🤝 Contributing
 
-Contribuições são bem-vindas! Por favor:
+Contributions are welcome! Please:
 
-1. **Fork** o projeto
-2. **Crie uma branch** para sua feature (`git checkout -b feature/AmazingFeature`)
-3. **Commit** suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. **Push** para a branch (`git push origin feature/AmazingFeature`)
-5. **Abra um Pull Request**
+1. **Fork** the project
+2. **Create a branch** for your feature (`git checkout -b feature/AmazingFeature`)
+3. **Commit** your changes (`git commit -m 'Add some AmazingFeature'`)
+4. **Push** to the branch (`git push origin feature/AmazingFeature`)
+5. **Open a Pull Request**
 
-### Padrões de Commit
-- `feat:` Nova funcionalidade
-- `fix:` Correção de bug
-- `docs:` Documentação
-- `style:` Formatação (sem mudança de código)
-- `refactor:` Refatoração
-- `test:` Testes
+### Commit Standards
+- `feat:` New feature
+- `fix:` Bug fix
+- `docs:` Documentation
+- `style:` Formatting (no code change)
+- `refactor:` Refactoring
+- `test:` Tests
 - `chore:` Build/CI
 
-## 📄 Licença
+## 📄 License
 
-Este projeto está licenciado sob a MIT License - veja o arquivo [LICENSE](LICENSE) para detalhes.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Agradecimentos
+## 🙏 Acknowledgements
 
-- [Flutter Team](https://flutter.dev) - Framework incrível
-- [Quill](https://quilljs.com) - Editor de texto rico
+- [Flutter Team](https://flutter.dev) - Amazing framework
+- [Quill](https://quilljs.com) - Rich text editor
 - [GetIt](https://pub.dev/packages/get_it) - Service Locator
 - [Provider](https://pub.dev/packages/provider) - State Management
 
-## 📞 Suporte
+## 📞 Support
 
 - **Issues**: [GitHub Issues](https://github.com/Jvagarinho/Paff/issues)
-- **Documentação**: Este README + [TESTING.md](TESTING.md)
-- **Email**: [Seu email aqui]
+- **Documentation**: This README + [TESTING.md](TESTING.md)
+- **Email**: [Your email here]
 
 ---
 
-**Desenvolvido com ❤️ e ☕ usando Flutter**
+**Built with ❤️ and ☕ using Flutter**
 
 [![GitHub stars](https://img.shields.io/github/stars/Jvagarinho/Paff?style=social)](https://github.com/Jvagarinho/Paff/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/Jvagarinho/Paff?style=social)](https://github.com/Jvagarinho/Paff/network)
